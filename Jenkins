@@ -1,44 +1,30 @@
 pipeline {
     agent any
-
-    environment {
-        DOCKER_IMAGE_NAME = "burp-scan-image"
-        DOCKERFILE_PATH = "./Dockerfile"
-    }
-
     stages {
+        stage('Declarative: Checkout SCM') {
+            steps {
+                checkout scm
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
-                script {
-                    // Build the Docker image using the Dockerfile in the repository
-                    echo "Building Docker image from Dockerfile..."
-                    sh 'docker build -t $DOCKER_IMAGE_NAME -f $DOCKERFILE_PATH .'
-                }
+                echo 'Building Docker image from Dockerfile...'
+                bat 'docker build -t my-image .'  // Build Docker image (adjust the command if needed)
             }
         }
 
         stage('Run Burp Suite Scan') {
             steps {
-                cleanWs() // Clean the workspace to avoid leftover files
-
-                script {
-                    // Run the Burp Suite scan inside the Docker container
-                    echo "Running Burp Suite scan inside the Docker container..."
-                    sh '''
-                        docker run --user $(id -u) -v ${WORKSPACE}:${WORKSPACE}:rw \
-                        -e BURP_START_URL=https://ginandjuice.shop/ \
-                        -e BURP_REPORT_FILE_PATH=${WORKSPACE}/burp-report.xml \
-                        $DOCKER_IMAGE_NAME
-                    '''
-                }
+                echo 'Running Burp Suite Scan...'
+                bat 'start /B burpsuite.exe'  // Run Burp Suite in the background (adjust path if necessary)
             }
         }
-    }
 
-    post {
-        always {
-            // Archive the Burp Suite scan report for later inspection
-            archiveArtifacts artifacts: 'burp-report.xml', allowEmptyArchive: true
+        stage('Declarative: Post Actions') {
+            steps {
+                archiveArtifacts artifacts: '**/target/*.jar', allowEmptyArchive: true  // Example artifact collection
+            }
         }
     }
 }
