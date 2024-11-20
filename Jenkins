@@ -2,9 +2,8 @@ pipeline {
     agent any
 
     environment {
-        // Define the Docker image name and path for the Dockerfile
         DOCKER_IMAGE_NAME = "burp-scan-image"
-        DOCKERFILE_PATH = "./Dockerfile" // Path to Dockerfile, adjust if needed
+        DOCKERFILE_PATH = "./Dockerfile"
     }
 
     stages {
@@ -40,9 +39,6 @@ pipeline {
         always {
             // Archive the Burp Suite scan report for later inspection
             archiveArtifacts artifacts: 'burp-report.xml', allowEmptyArchive: true
-
-            // If the report is in JUnit format, you can use the junit step to process it
-            // junit testResults: 'burp-report.xml', skipPublishingChecks: true
         }
     }
 }
