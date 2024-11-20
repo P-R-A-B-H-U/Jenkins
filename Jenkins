@@ -1,28 +1,48 @@
-// Jenkinsfile (Declarative Pipeline) for integration of Dastardly, from Burp Suite.
-
 pipeline {
     agent any
+
+    environment {
+        // Define the Docker image name and path for the Dockerfile
+        DOCKER_IMAGE_NAME = "burp-scan-image"
+        DOCKERFILE_PATH = "./Dockerfile" // Path to Dockerfile, adjust if needed
+    }
+
     stages {
-        stage ("Docker Pull Dastardly from Burp Suite container image") {
+        stage('Build Docker Image') {
             steps {
-                sh 'docker pull public.ecr.aws/portswigger/dastardly:latest'
+                script {
+                    // Build the Docker image using the Dockerfile in the repository
+                    echo "Building Docker image from Dockerfile..."
+                    sh 'docker build -t $DOCKER_IMAGE_NAME -f $DOCKERFILE_PATH .'
+                }
             }
         }
-        stage ("Docker run Dastardly from Burp Suite Scan") {
+
+        stage('Run Burp Suite Scan') {
             steps {
-                cleanWs()
-                sh '''
-                    docker run --user $(id -u) -v ${WORKSPACE}:${WORKSPACE}:rw \
-                    -e BURP_START_URL=https://ginandjuice.shop/ \
-                    -e BURP_REPORT_FILE_PATH=${WORKSPACE}/dastardly-report.xml \
-                    public.ecr.aws/portswigger/dastardly:latest
-                '''
+                cleanWs() // Clean the workspace to avoid leftover files
+
+                script {
+                    // Run the Burp Suite scan inside the Docker container
+                    echo "Running Burp Suite scan inside the Docker container..."
+                    sh '''
+                        docker run --user $(id -u) -v ${WORKSPACE}:${WORKSPACE}:rw \
+                        -e BURP_START_URL=https://ginandjuice.shop/ \
+                        -e BURP_REPORT_FILE_PATH=${WORKSPACE}/burp-report.xml \
+                        $DOCKER_IMAGE_NAME
+                    '''
+                }
             }
         }
     }
+
     post {
         always {
-            junit testResults: 'dastardly-report.xml', skipPublishingChecks: true
+            // Archive the Burp Suite scan report for later inspection
+            archiveArtifacts artifacts: 'burp-report.xml', allowEmptyArchive: true
+
+            // If the report is in JUnit format, you can use the junit step to process it
+            // junit testResults: 'burp-report.xml', skipPublishingChecks: true
         }
     }
 }
